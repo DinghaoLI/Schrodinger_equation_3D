@@ -1,0 +1,25 @@
+{
+    "dx" : 0.05,
+    "dy" : 0.05,
+    "dt" : 0.001,
+    "Nx" : 200,
+    "Ny" : 200,
+    "Nt" : 60,
+    "x0" : -5,
+    "y0" : -5,
+    "tf" : 2,
+    "psi_type" : "plane",
+    "psi_param" : {
+        "kx" : 1,
+        "ky" : 1,
+        "muY" : null,
+        "muX" : null,
+        "w" : null,
+        "sigX": null,
+        "sigY": null,
+        "phase": null
+    },
+    "pot_type" : "null",
+    "pot_param" : null,
+    "solver_algo" : "ctcs"
+}

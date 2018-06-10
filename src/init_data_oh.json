@@ -1,0 +1,19 @@
+{
+    "dx" : 0.1,
+    "dy" : 0.1,
+    "dt" : 0.001,
+    "Nx" : 300,
+    "Ny" : 300,
+    "Nt" : 100,
+    "x0" : -20,
+    "y0" : -20,
+    "tf" : 2,
+    "psi_type" : "OH",
+    "psi_param" : {
+        "nx" : 1,
+        "ny" : 1
+    },
+    "pot_type" : "null",
+    "pot_param" : null,
+    "solver_algo" : "ftcs"
+}

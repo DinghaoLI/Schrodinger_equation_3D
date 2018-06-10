@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Projet IPS</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="core/fonts/mono.css"> 
+    <link rel="stylesheet" type="text/css" href="core/css/animate.css"> 
+    <link rel="stylesheet" type="text/css" href="core/css/cinescript.css"> 
+    <link rel="stylesheet" type="text/css" href="core/css/style_core.css"> 
+    <link rel="stylesheet" type="text/css" href="core/css/mermaid.css"> 
+    <link rel="stylesheet" type="text/css" href="core/css/gitgraph.css"> 
+    <link rel="stylesheet" type="text/css" href="core/css/style_ensiie.css"> 
+  </head>
+  <body>
+    <textarea id="source" readonly>
+class: titlepage
+
+<center>
+.title[
+Présentation du projet PSA - ENSIIE - 2018]
+
+
+.subtitle[
+Dinghao LI
+
+Tingting WANG
+]
+</center>
+
+.footnote[
+[:book:](../toc/index.html)
+]
+
+???
+
+Some slide notes.
+
+Want some `\(\LaTeX\)` ?
+
+`$$a_{0}=\frac{1}{4}b_{1}$$`
+
+Some items:
+* first
+* second
+* third
+
+---
+
+#Structure du projet
+
+.column.middle.hcenter.grow[
+.tree[
+project
+* **bindings**
+    * *.i
+    * setup.py
+    * *
+* **src**
+    * *.h
+    * *.cpp
+    * *.py
+    * ...
+    * Makefile
+* **doc**
+    * html
+    * latex
+    * Makefile
+* **pres**
+    * ...
+* Makefile
+* Doxyfile
+* astyle.conf
+]]
+
+
+---
+
+
+# Architecture du projet
+
+.mermaid.w60.hcenter[
+    graph LR
+    A("Field generator") --> B
+    B("Solver") --> C("Monitor")
+    style B fill:#090 
+]
+
+## Field generator
+* écrit en **Python2**
+* génère la fonction d'onde initiale `\(\psi_0\)`
+* génère le champ potentiel `\(V\)` depuis une image
+
+## Solver
+* écrit en **Python2** et **C++**
+* calcul de la propagation dynamique de la fonction d'onde
+* contient une **API** pour vérifier la progression du calcul
+* stocke les résultats dans une base **mongoDB**
+
+---
+
+#Sujet
+
+## Equation de Schrödinger non relativiste dépendant du temps
+
+.block[
+`$$i\hbar\frac{\partial}{\partial t}\psi(x,y,t) = \hat{\mathcal{H}}_{(x,y)}\psi(x,y,t)$$`
+]
+
+avec l'opérateur Hamiltonien 2D :
+`$$\hat{\mathcal{H}}_{(x,y)}\equiv \frac{\hat{p}_{(x)}^2}{2m} + \frac{\hat{p}_{(y)}^2}{2m} + \hat{V}(x,y),$$`
+et la quantité de mouvement :
+`$$\forall u \in \{x,y\},\hspace{5mm}\hat{p}_{(u)}\equiv -i\hbar\frac{\partial}{\partial u}.$$`
+Constantes:
+* `\(\hbar\)` est la **constante de Planck réduite**
+`$$\hbar \equiv 6.582119514\times10^{−22}\,\textrm{MeV.s}$$`
+* `\(m\)` est la **masse du neutron**
+`$$m\equiv 939.5654133\,\textrm{MeV/c}^2$$`
+* `\(i\)` est le **nombre imaginaire** (`\(i^2=-1\)`)
+
+---
+#Field generator
+
+## Fonction d'onde plane
+
+`$$\psi(\mathbf{x}, \mathbf{y})=  \exp^{i(k_x\mathbf{x}+k_y\mathbf{y})} \times \exp^{-(\frac{\mathbf{x}^2-\mu_x}{2\sigma_x^2 } + \frac{\mathbf{y}^2-\mu_y}{2\sigma_y^2 })}$$`
+
+.column.middle.grow[
+.row.middle.grow[
+.center.w100.middle[
+![](images/plane_t0.png)
+]]
+]
+---
+#Field generator
+
+## Fonction d'onde Oscillateur Harmonique
+
+`$$\forall n_x\ge 0,\, \forall n_y\ge 0,\, \psi_{n_x,n_y}(x,y)=\psi_{n_x}(x).\psi_{n_y}(y),$$`
+avec
+`$$\forall u \in \{x,y\},\hspace{5mm}\psi_{n_u}(u) = \frac{1}{\sqrt{2^n_u n_u!}}\left(\frac{m\omega}{\pi\hbar}\right)^{1/4}e^{-\frac{m\omega u^2}{2\hbar}}H_{n_u}\left(\sqrt{\frac{m\omega}{\hbar}} . u\right).$$`
+
+.column.middle.grow[
+.row.middle.grow[
+.center.w100.middle[
+![](images/OH_t0.png)
+]]
+]
+
+---
+#Field generator
+
+## Potentiel 
+
+$$\hat{V}(x,y) $$  
+
+Le potentiel est une matrice par défaut et le client peut aussi importer une image aussi.   
+
+
+
+
+.row[
+.w48[
+.left[![Left-aligned image](../src/test.png)]
+]
+.w48[
+.left[![Left-aligned image](images/potentiel.png)]
+]
+]
+
+
+---
+#Solver 
+
+## Méthode explicite (FTCS)
+
+* forward difference en temps `\(t_n\)`
+
+* central difference du second ordre en position `\(x_i\)`
+
+## Equation de l'évoluton
+`$$i\hbar\frac{\partial}{\partial t}\psi(x,y,t) = \hat{\mathcal{H}}_{(x,y)}\psi(x,y,t)$$`
+avec l'opérateur Hamiltonien 2D :
+`$$\hat{\mathcal{H}}_{(x,y)}\equiv \frac{\hat{p}_{(x)}^2}{2m} + \frac{\hat{p}_{(y)}^2}{2m} + \hat{V}(x,y),$$`
+et la quantité de mouvement :
+`$$\forall u \in \{x,y\},\hspace{5mm}\hat{p}_{(u)}\equiv -i\hbar\frac{\partial}{\partial u}.$$`
+
+---
+#Solver
+
+## FTCS
+
+* forward difference en temps`\(t_n\)`
+
+`$$\frac{\partial}{\partial t}\psi(t) = \frac{\psi(t+dt) - \psi(t)}{dt}$$`
+
+* central difference du second ordre en position `\(x_i\)`
+
+`$$\frac{\partial^{2}}{\partial t}\psi(x) =\frac{\psi(x+dx) - \psi(x) + \psi(x-dx)}{dx^{2}}$$`
+
+
+* On peut déduire que 
+
+`$$\begin{eqnarray}\psi^{t+dt} &=& \frac{ihdt}{2m}\left(\frac{\psi_{x+dx}-2\psi+\psi_{x-dx}}{dx^{2}} + \frac{\psi_{y+dy}-2\psi+\psi_{y-dy}}{dy^{2}}\right)\\
+&-& \frac{idt}{h}V\psi\\
+&+& \psi\end{eqnarray}$$`
+
+---
+#Solver
+
+## Le calcul en `C++`
+## .hcenter[\[Solver.cpp\]]
+.wauto[
+```C++
+arma::cx_mat Solver::ftcs(double tf){
+    double t = 0;
+    init_psi();
+    uint i,j;
+    std::complex<double> complex_i = std::complex<double>(0.0,1.0);
+
+    while (t<tf){
+
+        psi.submat(1,1,psi0.n_rows,psi0.n_cols) =  complex_i * (h * dt)/(2* m) * ( \
+            (psi.submat(2, 1, psi0.n_rows +1, psi0.n_cols) - 2.0 \
+            * psi.submat(1,1,psi0.n_rows,psi0.n_cols) + psi.submat(0, 1, psi0.n_rows -1, psi0.n_cols))/(\
+            dx*dx) + (psi.submat(1,2,psi0.n_rows,psi0.n_cols +1) - 2.0 * psi.submat \
+            (1,1,psi0.n_rows,psi0.n_cols) + psi.submat(1,0,psi0.n_rows,psi0.n_cols -1))/(dy*dy) ) \
+            - complex_i * dt/h * V % psi.submat(1,1,psi0.n_rows,psi0.n_cols) \
+            + psi.submat(1,1,psi0.n_rows,psi0.n_cols);
+        
+        t = t + dt;
+       
+    }
+    return psi.submat(1,1,psi0.n_rows,psi0.n_cols);
+}
+
+```
+]
+
+---
+
+#Solver 
+
+## Méthode implicite (BTCS)
+
+* backward difference at time `\(t_{n+1}\)`
+* second-order central difference at position `\(x_i\)`
+
+## Evolution equation
+`$$i\hbar\frac{\partial}{\partial t}\psi(x,y,t) = \hat{\mathcal{H}}_{(x,y)}\psi(x,y,t)$$`
+with the 2D-Hamiltonian operator defined as
+`$$\hat{\mathcal{H}}_{(x,y)}\equiv \frac{\hat{p}_{(x)}^2}{2m} + \frac{\hat{p}_{(y)}^2}{2m} + \hat{V}(x,y),$$`
+and the momentum operators defined as
+`$$\forall u \in \{x,y\},\hspace{5mm}\hat{p}_{(u)}\equiv -i\hbar\frac{\partial}{\partial u}.$$`
+
+---
+
+#Solver
+
+## BTCS
+
+* backward difference en temps`\(t_n\)`
+
+`$$\frac{\partial}{\partial t}\psi(t+dt) = \frac{\psi(t+dt) - \psi(t)}{dt}$$`
+
+* central difference du second ordre en position `\(x_i\)`
+
+`$$\frac{\partial^{2}}{\partial t}\psi(x) =\frac{\psi(x+dx) - \psi(x) + \psi(x-dx)}{dx^{2}}$$`
+
+
+* On peut déduire que 
+
+`$$\begin{eqnarray}\psi^{t+dt} &=& \frac{(\frac{-h^2}{2m})(\frac{\psi^{t+dt}_{x+dx}+\psi^{t+dt}_{x-dx}}{dx^2}+\frac{\psi^{t+dt}_{y+dy}+\psi^{t+dt}_{y-dy}}{dy^2})+\frac{ih}{dt}\psi^{t})}{\frac{ih}{dt}-V-\frac{h^2}{2m}(\frac{1}{dx^2}+\frac{1}{dy^2})}
+\end{eqnarray}$$`
+
+---
+
+#Solver
+
+## Le calcul en `C++`
+## .hcenter[\[Solver.cpp\]]
+.wauto[
+```C++
+arma::cx_mat Solver::btcs(int iter){
+    std::complex<double> complex_i = std::complex<double>(0.0,1.0);
+    arma::cx_mat init = psi;
+    arma::cx_mat tmp = psi;
+    arma::cx_mat param = (-1 * V) + (complex_i * h / dt) - (h * h / m) * (1/(dx*dx) + 1/(dy*dy));  
+    
+    for(int i = 0; i < iter; i++){
+        tmp.submat(1,1,psi0.n_rows,psi0.n_cols) = (-1 * h * h / (2*m) * \
+        ((tmp.submat(2, 1, psi0.n_rows +1, psi0.n_cols) + tmp.submat(0, 1, psi0.n_rows -1, psi0.n_cols))/(dx*dx) + \
+        (tmp.submat(1,2,psi0.n_rows,psi0.n_cols +1) + tmp.submat(1,0,psi0.n_rows,psi0.n_cols -1))/(dy*dy)) + \
+        complex_i * h / dt * psi.submat(1,1,psi0.n_rows,psi0.n_cols)) / param;
+
+    }
+    psi.submat(1,1,psi0.n_rows,psi0.n_cols) = tmp.submat(1,1,psi0.n_rows,psi0.n_cols);    
+    return psi.submat(1,1,psi0.n_rows,psi0.n_cols);
+}
+
+```
+]
+---
+
+
+#Solver 
+
+## Crank-Nicolson (CTCS)
+
+* central difference at time `\(t_{n+\frac{1}{2}}\)`
+* second-order central difference at position `\(x_i\)`
+
+## Evolution equation
+`$$i\hbar\frac{\partial}{\partial t}\psi(x,y,t) = \hat{\mathcal{H}}_{(x,y)}\psi(x,y,t)$$`
+with the 2D-Hamiltonian operator defined as
+`$$\hat{\mathcal{H}}_{(x,y)}\equiv \frac{\hat{p}_{(x)}^2}{2m} + \frac{\hat{p}_{(y)}^2}{2m} + \hat{V}(x,y),$$`
+and the momentum operators defined as
+`$$\forall u \in \{x,y\},\hspace{5mm}\hat{p}_{(u)}\equiv -i\hbar\frac{\partial}{\partial u}.$$`
+
+---
+
+#Solver
+
+## CTCS
+
+* On peut déduire que 
+
+`$$\begin{eqnarray}\left(\frac{2i\hbar}{dt}-V(x,y)-\frac{\hbar^2}{m.dx^2}-\frac{\hbar^2}{m.dy^2}\right)\psi^{(t+dt)} 
+\\ = - \frac{\hbar^2}{2m.dx^2}\left(\psi^{(t+dt)}_{x+dx}+\psi^{(t+dt)}_{x-dx}+\psi_{x+dx}+\psi_{x-dx}\right)\\ - \frac{\hbar^2}{2m.dy^2}\left(\psi^{(t+dt)}_{y+dy}+\psi^{(t+dt)}_{y-dy}+\psi_{y+dy}+\psi_{y-dy}\right)\\+ \left(V(x,y) + \frac{2i\hbar}{dt}+\frac{\hbar^2}{m.dx^2}+\frac{\hbar^2}{m.dy^2}\right)\psi\end{eqnarray}$$`
+
+---
+
+#Solver
+
+## Le calcul en `C++`
+## .hcenter[\[Solver.cpp\]]
+.wauto[
+```C++
+arma::cx_mat Solver::ctcs(int iter){
+    std::complex<double> complex_i = std::complex<double>(0.0,1.0);
+    arma::cx_mat tmp = psi;
+    arma::cx_mat param = (-1 * V) + (2.0*complex_i*h) / dt - (h * h)/ (m * dx * dx) - (h * h)/(m * dy*dy);  
+    
+    for(int i = 0; i < iter; i++){
+        tmp.submat(1,1,psi0.n_rows,psi0.n_cols) = (\
+        ((- h*h) / (2*m*dx*dx)) * (tmp.submat(2, 1, psi0.n_rows +1, psi0.n_cols) + tmp.submat(0, 1, psi0.n_rows -1, psi0.n_cols)) +\
+        ((- h*h) / (2*m*dx*dx)) * (psi.submat(2, 1, psi0.n_rows +1, psi0.n_cols) + psi.submat(0, 1, psi0.n_rows -1, psi0.n_cols)) +\
+        ((- h*h) / (2*m*dy*dy)) * (tmp.submat(1, 2, psi0.n_rows, psi0.n_cols +1) + tmp.submat(1, 0, psi0.n_rows, psi0.n_cols -1)) +\
+        ((- h*h) / (2*m*dy*dy)) * (psi.submat(1, 2, psi0.n_rows, psi0.n_cols +1) + psi.submat(1, 0, psi0.n_rows, psi0.n_cols -1)) +\
+        (V + (2.0*complex_i*h)/dt + (h*h)/(m*dx*dx) + (h*h)/(m*dy*dy)) % psi.submat(1,1,psi0.n_rows,psi0.n_cols)) / param;
+
+    }
+    psi = tmp;    
+    return psi.submat(1,1,psi0.n_rows,psi0.n_cols);
+}
+
+
+```
+]
+---
+
+# Solver
+
+##Test Unitaire
+
+.row[
+.w48[
+## .hcenter[FTCS: 1e-05]
+```C++
+void testSolver01(void)
+    {
+        double dx = 0.1;
+        double dy = 0.1;
+        double dt = 0.0001;
+
+        arma::cx_mat psi0(50, 50, arma::fill::randu);
+        arma::mat v(50, 50, arma::fill::randu);
+        v.zeros();
+
+        Solver solver(psi0, v, 6.582119514, 939.5654133\
+        , dt, dx, dy);
+        int count = 0;
+        arma::cx_mat res = solver.ftcs();
+        while(count < 100){
+            res = solver.ftcs();
+            count++;
+        }
+        TS_ASSERT_DELTA(arma::norm(psi0) - \
+        arma::norm(res), 0.0, 1e-05);
+    }
+```
+]
+.w48[
+## .hcenter[BTCS: 1e-06]
+```C++
+
+void testSolver02(void)
+    {
+        double dx = 0.1;
+        double dy = 0.1;
+        double dt = 0.0001;
+
+        arma::cx_mat psi0(50, 50, arma::fill::randu);
+        arma::mat v(50, 50, arma::fill::randu);
+        v.zeros();
+
+        Solver solver(psi0, v, 6.582119514, 939.5654133,\
+         dt, dx, dy);
+        int count = 0;
+        arma::cx_mat res = solver.btcs(100);
+        while(count < 100){
+            res = solver.btcs(100);
+            count++;
+        }
+        TS_ASSERT_DELTA(arma::norm(psi0) - \
+        arma::norm(res), 0.0, 1e-06);
+    }
+
+```
+]
+]
+
+---
+
+#Solver
+
+##Test Unitaire
+
+## .hcenter[CTCS < 1e-12]
+.wauto[
+```C++
+
+void testSolver03(void)
+{
+    double dx = 0.1;
+    double dy = 0.1;
+    double dt = 0.0001;
+
+    arma::cx_mat psi0(50, 50, arma::fill::randu);
+    arma::mat v(50, 50, arma::fill::randu);
+    v.zeros();
+
+    Solver solver(psi0, v, 6.582119514, 939.5654133, dt, dx, dy);
+    int count = 0;
+    arma::cx_mat res = solver.ctcs(100);
+    while(count < 100){
+        res = solver.ctcs(100);
+        count++;
+    }
+    TS_ASSERT_DELTA(arma::norm(psi0) - arma::norm(res), 0.0, 1e-012);
+}
+
+```
+]
+---
+
+
+#Normalité `\(\psi\)`
+
+## Normalité de `\(\psi\)`
+
+`$$\forall t, \iint \psi^*(x,y,t).\psi(x,y,t)\,dx\,dy - \iint \psi_0^*(x,y).\psi_0(x,y)\,dx\,dy \approx 0.$$`
+
+.column.middle.grow[
+.row.middle.grow[
+.center.w70.middle[
+![](images/3_norm.png)
+]]
+]
+
+---
+#MongoBD et Monitoring
+
+
+## Utiliser des résultats partiels pour démarrer et continuer un calcul.
+
+.mermaid.hcenter[
+  graph LR
+  A(User) --JSON--> B
+  B(Generator) -- partial --> D
+  C(Solver) -- partial --> D
+  D(MongoDB) -- partial --> E
+  E(Monitor) -- vtk --> F(Paraview)
+  D -- partial --> C
+]
+
+---
+
+#MongoBD
+
+## La structure de mongoBD 
+
+## Normalité
+
+`$$\forall t, \iint \psi^*(x,y,t).\psi(x,y,t)\,dx\,dy = \iint \psi_0^*(x,y).\psi_0(x,y)\,dx\,dy = 1.$$`
+
+.column.middle.grow[
+.row.middle.grow[
+.center.w60.middle[
+![](images/mongo.png)
+]]
+]
+
+
+---
+
+#Solver
+
+## Exemple de résultat pour une onde plane
+
+pour `\(t = 120 * 10^{-22}s\)`
+
+
+.hcenter.w65[
+
+<video controls="yes" loop="yes" preload="auto" width="100%" height="auto" data-setup="{}" loop>
+    <source src="videos/plane_1.webm" type="video/webm" />
+</video>
+]
+---
+
+#Solver
+
+## Exemple de résultat pour un oscillateur harmonique 
+
+pour `\(t = [0;200 * 10^{-22}]s\)` et `\(n_x = 0 , n_y = 0\)`
+
+
+.hcenter.w65[
+
+<video controls="yes" loop="yes" preload="auto" width="100%" height="auto" data-setup="{}" loop>
+    <source src="videos/oh_1.webm" type="video/webm" />
+</video>
+]
+
+---
+#Solver
+
+## Exemple de résultat pour Fentes de Young
+
+pour `\(t = 120 * 10^{-22}s\)`
+
+.hcenter.w65[
+
+<video controls="yes" loop="yes" preload="auto" width="100%" height="auto" data-setup="{}" loop>
+    <source src="videos/young.webm" type="video/webm" />
+</video>
+]
+
+
+</textarea>
+
+<script src="core/javascript/remark.js"></script>
+<script src="core/javascript/plotly.js" type="text/javascript"></script>
+<script src="core/javascript/MathJax/MathJax.js?config=TeX-AMS-MML_HTMLorMML&delayStartupUntil=configured" type="text/javascript"></script>
+<script src="core/javascript/emojify.js" type="text/javascript"></script>
+<script src="core/javascript/mermaid.js" type="text/javascript"></script>
+<script src="core/javascript/term.js" type="text/javascript"></script>
+<script src="core/javascript/jquery-2.1.1.min.js" type="text/javascript"></script>
+<script src="core/javascript/extend-jquery.js" type="text/javascript"></script>
+<script src="core/javascript/cinescript.js" type="text/javascript"></script>
+<script src="core/javascript/gitgraph.js" type="text/javascript"></script>
+<script>
+
+// === Remark.js initialization ===
+var slideshow = remark.create({
+  highlightStyle: 'monokai',
+  countIncrementalSlides: false,
+  highlightLines: true,
+  highlightInlineCode: false
+});
+
+// === Mermaid.js initialization ===
+mermaid.initialize({
+  startOnLoad: false,
+  cloneCssStyles: false,
+  flowchart:{
+    height: 50
+  },
+  sequenceDiagram:{
+    width: 110,
+    height: 30
+  }
+});
+
+function initMermaid(s) {
+  var diagrams = document.querySelectorAll('.mermaid');
+  var i;
+  for(i=0;i<diagrams.length;i++){
+    if(diagrams[i].offsetWidth>0){
+      mermaid.init(undefined, diagrams[i]);
+    }
+  }
+}
+
+slideshow.on('afterShowSlide', initMermaid);
+initMermaid(slideshow.getSlides()[slideshow.getCurrentSlideIndex()]);
+
+// === MathJax.js initialization ===
+MathJax.Hub.Config({ tex2jax: { skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'] } }); 
+MathJax.Hub.Queue(function() { $(MathJax.Hub.getAllJax()).map(function(index, elem) { return(elem.SourceElement()); }).parent().addClass('has-jax'); });
+MathJax.Hub.Configured();
+
+// === Emojify.js initialization ===
+emojify.run();
+
+// === Cinescript initialization ===
+$(document).ready(init_cinescripts);
+
+</script>
+</body>
+</html>
+
+
